@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -97,7 +98,7 @@ func main() {
 	transcoder := flag.Bool("transcoder", false, "Set to true to be a transcoder")
 	broadcaster := flag.Bool("broadcaster", false, "Set to true to be a broadcaster")
 	orchSecret := flag.String("orchSecret", "", "Shared secret with the orchestrator as a standalone transcoder")
-	transcodingOptions := flag.String("transcodingOptions", "P240p30fps16x9,P360p30fps16x9", "Transcoding options for broadcast job")
+	transcodingOptions := flag.String("transcodingOptions", "P240p30fps16x9,P360p30fps16x9", "Transcoding options for broadcast job, or path to json config")
 	maxAttempts := flag.Int("maxAttempts", 3, "Maximum transcode attempts")
 	maxSessions := flag.Int("maxSessions", 10, "Maximum number of concurrent transcoding sessions for Orchestrator, maximum number or RTMP streams for Broadcaster, or maximum capacity for transcoder")
 	currentManifest := flag.Bool("currentManifest", false, "Expose the currently active ManifestID as \"/stream/current.m3u8\"")
@@ -810,6 +811,31 @@ func main() {
 		drivers.NodeStorage = drivers.NewFilesystemDriver(mediaDir)
 	}
 
+	if *transcodingOptions != "" {
+		profiles := server.BroadcastJobVideoProfiles
+		content, err := ioutil.ReadFile(*transcodingOptions)
+		if err == nil && len(content) > 0 {
+			stubResp := &server.AuthWebhookResponse{}
+			err = json.Unmarshal(content, &stubResp.Profiles)
+			if err != nil {
+				glog.Fatal("Invalid JSON for profiles err=", err)
+			}
+			profiles, err = server.JSONProfileToVideoProfile(stubResp)
+			if err != nil {
+				glog.Fatal("Invalid profiles err=", err)
+			}
+		} else {
+			// check the built-in profiles
+			profiles = server.ParsePresets(strings.Split(*transcodingOptions, ","))
+		}
+		if len(profiles) <= 0 {
+			// TODO failing out here is a new behavior. Should we keep it?
+			glog.Fatal("No transcoding profiles found")
+		}
+		server.BroadcastJobVideoProfiles = profiles
+		// TODO add args test for all this !!
+	}
+
 	//Create Livepeer Node
 
 	//Set up the media server
@@ -831,7 +857,7 @@ func main() {
 	}()
 	if n.NodeType != core.RedeemerNode {
 		go func() {
-			ec <- s.StartMediaServer(msCtx, *transcodingOptions, *httpAddr)
+			ec <- s.StartMediaServer(msCtx, *httpAddr)
 		}()
 	}
 

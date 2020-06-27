@@ -54,7 +54,7 @@ func setupServerWithCancel() (*LivepeerServer, context.CancelFunc) {
 		}
 		n, _ := core.NewLivepeerNode(nil, "./tmp", nil)
 		S = NewLivepeerServer("127.0.0.1:1938", n, true)
-		go S.StartMediaServer(ctx, "", "127.0.0.1:8080")
+		go S.StartMediaServer(ctx, "127.0.0.1:8080")
 		go S.StartCliWebserver("127.0.0.1:8938")
 	}
 	return S, cancel
@@ -972,16 +972,16 @@ func TestParsePresets(t *testing.T) {
 	assert := assert.New(t)
 	presets := []string{"P240p30fps16x9", "unknown", "P720p30fps16x9"}
 
-	p := parsePresets([]string{})
+	p := ParsePresets([]string{})
 	assert.Equal([]ffmpeg.VideoProfile{}, p)
 
-	p = parsePresets(nil)
+	p = ParsePresets(nil)
 	assert.Equal([]ffmpeg.VideoProfile{}, p)
 
-	p = parsePresets([]string{"bad", "example"})
+	p = ParsePresets([]string{"bad", "example"})
 	assert.Equal([]ffmpeg.VideoProfile{}, p)
 
-	p = parsePresets(presets)
+	p = ParsePresets(presets)
 	assert.Equal([]ffmpeg.VideoProfile{ffmpeg.P240p30fps16x9, ffmpeg.P720p30fps16x9}, p)
 
 }

@@ -497,7 +497,7 @@ func TestPush_SetVideoProfileFormats(t *testing.T) {
 	// Checking since there is special handling for the default set of profiles
 	// within the webhook hander.
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := authWebhookResponse{ManifestID: "web"}
+		auth := AuthWebhookResponse{ManifestID: "web"}
 		val, err := json.Marshal(auth)
 		assert.Nil(err, "invalid auth webhook response")
 		w.Write(val)
